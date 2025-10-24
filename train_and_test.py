@@ -1,5 +1,7 @@
 """Training and evaluation utilities for LinHRU and NonlinHRU models.
 
+
+
 This module provides a complete pipeline for training and testing recurrent state-space models
 (LinHRU/NonlinHRU) on time series classification and regression tasks using JAX and Equinox.
 
