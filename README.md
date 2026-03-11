@@ -28,47 +28,20 @@ This repository is implemented in python 3.10 and uses Jax as their machine lear
 
 ### Environment
 
-This project requires Python 3.10+ and uses JAX for machine learning operations. We provide two methods for setting up your environment:
-
-#### Method 1: Using uv (Recommended - Fast & Reproducible)
-
-[uv](https://github.com/astral-sh/uv) is a fast Python package manager that provides exact reproducibility through the `uv.lock` file.
+This project requires Python 3.10+ and uses JAX for machine learning operations. We recommend using [uv](https://github.com/astral-sh/uv) with the lock file for exact reproducibility:
 
 ```bash
-# Install uv (choose one method):
-pip install uv                                    # Using pip
-# curl -LsSf https://astral.sh/uv/install.sh | sh  # Using installer script
-# pipx install uv                                  # Using pipx (isolated)
-
-# Create virtual environment and install exact versions from uv.lock
-uv venv
+pip install uv
+uv venv && source .venv/bin/activate
 uv pip sync uv.lock
-
-# Activate the virtual environment
-source .venv/bin/activate  # On Linux/Mac
-# .venv\Scripts\activate  # On Windows
 ```
 
-**Benefits**: 10-100x faster installs, exact version reproducibility across all systems.
-
-#### Method 2: Using pip (Traditional)
-
-If you prefer standard Python tooling:
+Alternatively, you can use `requirements.txt` with pip or uv:
 
 ```bash
-# Create virtual environment
-python -m venv .venv
-
-# Activate the virtual environment
-source .venv/bin/activate  # On Linux/Mac
-# .venv\Scripts\activate.bat  # On Windows (cmd)
-# .venv\Scripts\Activate.ps1  # On Windows (PowerShell)
-
-# Install dependencies
-pip install -r requirements.txt
+uv pip install -r requirements.txt
+# or: pip install -r requirements.txt
 ```
-
-**Benefits**: Works with standard pip, no additional tools required.
 
 #### Verify Installation
 
@@ -87,39 +60,7 @@ python -c "import jax; print(f'JAX devices: {jax.devices()}')"
 
 #### GPU Support (CUDA)
 
-The default installation above uses JAX with **CPU-only** support. If you have an NVIDIA GPU and want to use CUDA acceleration:
-
-**If you used uv:**
-
-```bash
-# After setting up with uv, upgrade to CUDA-enabled JAX
-uv pip install --upgrade "jax[cuda12]"  # For CUDA 12.x
-# uv pip install --upgrade "jax[cuda11]"  # For CUDA 11.x
-```
-
-**If you used pip:**
-
-```bash
-# After activating your virtual environment, upgrade to CUDA-enabled JAX
-pip install --upgrade "jax[cuda12]"  # For CUDA 12.x
-# pip install --upgrade "jax[cuda11]"  # For CUDA 11.x
-```
-
-**Verify GPU is being used:**
-
-```bash
-python -c "import jax; print(f'JAX devices: {jax.devices()}')"
-# Should show: [CudaDevice(id=0)] if GPU is available
-```
-
-#### Notes
-
-- **Dependency Files**:
-  - `requirements.txt` - Core dependencies for pip users
-  - `requirements.in` - Source file for generating uv.lock
-  - `uv.lock` - Complete dependency lock with ~70 packages for exact reproducibility
-- **CUDA Version**: Check your CUDA version with `nvidia-smi` and install the matching JAX version (cuda11 or cuda12)
-- **First Time Setup**: If you encounter GPU issues, refer to the [JAX installation guide](https://jax.readthedocs.io/en/latest/installation.html) for detailed troubleshooting
+The default installation uses JAX with CPU-only support. For GPU acceleration, follow the [JAX installation guide](https://docs.jax.dev/en/latest/installation.html).
 
 ---
 
