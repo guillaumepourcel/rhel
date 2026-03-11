@@ -319,7 +319,7 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
     )
 
     # do the contrastive gradient
-    grads_eqprop = jax.tree_map(lambda x: - (x[0] - x[1]) / (2 * epsilon), full_grads)
+    grads_eqprop = jax.tree.map(lambda x: - (x[0] - x[1]) / (2 * epsilon), full_grads)
 
     return grads_eqprop
 

@@ -127,6 +127,7 @@ def apply_nonlinhru_leapfrog_bptt(vjp_arg, args=None):
 
     return y
 
+# Function used when called outside of grad()
 @eqx.filter_custom_vjp
 def apply_nonlinhru_leapfrog(vjp_arg, args=None):
     Bu_elements, W_diag, b, c, alpha, step, _ = vjp_arg
@@ -138,7 +139,7 @@ def apply_nonlinhru_leapfrog(vjp_arg, args=None):
 
     return y
 
-
+# Forward pass when called inside of grad()
 @apply_nonlinhru_leapfrog.def_fwd
 def fn_fwd(perturbed, vjp_arg, args):
     Bu_elements, W_diag, b, c, alpha, step, _ = vjp_arg
@@ -150,7 +151,7 @@ def fn_fwd(perturbed, vjp_arg, args):
 
     return y, (z[-1], y[-1])
 
-
+# Backward pass when called inside of grad()
 @apply_nonlinhru_leapfrog.def_bwd
 def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
     Bu_elements, W_diag, b, c, alpha, step, epsilon = vjp_arg
@@ -175,7 +176,7 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
             y_half[:, :], Bu_elements_reversed, W_diag, b, c, alpha
         )
 
-        # average gradient over ti,e
+        # average gradient over time
         grads_hamiltonian_single_phase = [jnp.sum(grads, axis=0) if i != 0 else grads[::-1] for i, grads in enumerate(grads_t_hamiltonian_single_phase)]
         # Bu, alpha, W_diag, b, c
 
@@ -191,13 +192,13 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
         )
         return full_grads_single_phase
 
-    # vmap the dynamics and the learning rule
+    # vmap the dynamics and the learning rule over the two echo passes
     full_grads = jax.vmap(dynamics_and_grads, in_axes=(None, None, None, None, None, None, None, 0))(
         Bu_elements_reversed, nudging_reversed, W_diag, b, c, alpha, step, epsilons
     )
 
     # do the contrastive gradient
-    grads_eqprop = jax.tree_map(lambda x: - step * (x[0] - x[1]) / (2 * epsilon), full_grads)
+    grads_eqprop = jax.tree.map(lambda x: - step * (x[0] - x[1]) / (2 * epsilon), full_grads)
 
     return grads_eqprop
 
@@ -218,11 +219,9 @@ class NonlinHRULayer(eqx.Module):
 
         B_key, C_key, D_key, W_key, step_key, key = jr.split(key, 6)
         self.W_diag = random.uniform(W_key, shape=(ssm_size,), minval=0.5, maxval=1.0)
-        # self.b = random.uniform(key, shape=(ssm_size,))
         self.b = jnp.zeros((ssm_size,))
         self.c = random.uniform(key, shape=(ssm_size,), minval=-1.0, maxval=1.0)
         self.B = simple_uniform_init(B_key, shape=(ssm_size, H), std=1.0 / math.sqrt(H))
-        # self.B = jnp.zeros((ssm_size, H))
         self.C = simple_uniform_init(C_key, shape=(H, ssm_size), std=1.0 / math.sqrt(ssm_size))
         self.D = normal(stddev=1.0)(D_key, (H,))
         self.step = jnp.array([1e-4])
