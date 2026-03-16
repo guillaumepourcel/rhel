@@ -122,7 +122,7 @@ To run an experiment, you only need to specify the model and dataset. The script
 python run_experiment.py --model_name LinHRU --dataset_name Heartbeat --learning_algorithm BPTT --seeds 2345 
 
 # Run LinHRU on Heartbeat (the dataset with the smaller number of steps) dataset with RHEL
-python run_experiment.py --model_name LinHRU --dataset_name EigenWorms --learning_algorithm RHEL
+python run_experiment.py --model_name LinHRU --dataset_name Heartbeat --learning_algorithm RHEL --seeds 2345 
 ```
 
 **Key parameters:**
