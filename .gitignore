@@ -1,3 +1,7 @@
 outputs_grad/*
+outputs/
+data_dir/raw/
+data_dir/processed/
 __pycache__/
 *.pyc
+.venv*/

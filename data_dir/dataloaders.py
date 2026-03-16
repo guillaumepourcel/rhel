@@ -53,7 +53,7 @@ class Dataloader:
         if self.size == 0:
             raise ValueError("This dataloader is empty")
 
-        if not isinstance(batch_size, int) & (batch_size > 0):
+        if not (isinstance(batch_size, int) and batch_size > 0):
             raise ValueError("Batch size must be a positive integer")
 
         if batch_size > self.size:
@@ -94,7 +94,7 @@ class Dataloader:
         if self.size == 0:
             raise ValueError("This dataloader is empty")
 
-        if not isinstance(batch_size, int) & (batch_size > 0):
+        if not (isinstance(batch_size, int) and batch_size > 0):
             raise ValueError("Batch size must be a positive integer")
 
         if batch_size > self.size:

@@ -194,7 +194,7 @@ def train_model(
     no_val_improvement = 0
     all_time = []
     all_memory = []
-    start = time.time()
+    training_start = time.time()
     for step, data in zip(
         range(num_steps),
         dataloaders["train"].loop(batch_size, key=batchkey),
@@ -262,7 +262,7 @@ def train_model(
                 val_loss = jnp.mean(jnp.mean(jnp.mean((prediction - y) ** 2, axis=2), axis=1))
 
             end = time.time()
-            total_time = end - start
+            total_time = end - training_start
             
             
             avg_loss = running_loss / print_steps
@@ -272,7 +272,6 @@ def train_model(
                 f"Validation metric: {val_metric}, Val loss: {val_loss}, "
             )
             
-            start = time.time()
             if step > 0:
                 if operator_no_improv(val_metric, best_val(val_metric_for_best_model)):
                     no_val_improvement += 1
@@ -325,8 +324,8 @@ def train_model(
                 jnp.save(os.path.join(output_dir, "test_metric.npy"), test_metric_save)
 
         # End the run if time goes over 4 hours (compute cluster limit used for experiments)
-        end = time.time()
-        total_time = end - start
+        end_training = time.time()
+        total_time = end_training - training_start
         if total_time > 4 * 3600:
             print("Time limit exceeded 4 hours, ending training.")
             break
