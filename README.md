@@ -11,17 +11,10 @@ We propose Recurrent Hamiltonian Echo Learning (RHEL), a forward-only proxy of B
 RHEL thus points toward alternative compute paradigms where learning and inference are realized through the same underlying physical dynamics.
 
 <div align="center">
-  <img src="media/rhel.png" width="400">
+  <img src="media/rhel.png" width="600">
 </div>
 
-> Goal of this repository:
-> - Validate the theory
-> - Show scalalability of RHEL
-> - Provide a re-usable codebase for the community
-> - Test the limits of RHEL
-
-
-> Main design choice: implement RHEL as a custom backward pass. 
+> Goal: test RHEL at scale by applying it to a SOTA SSM architecture (LinOSS) and a nonlinear SSM (inspired by UnICORNN) to show its generality. RHEL is forward-only: the same forward pass (including parallel scan) is re-used for the backward pass of the Hamiltonian part.
 ## Requirements
 
 This repository is implemented in python 3.10 and uses Jax as their machine learning framework.
@@ -125,11 +118,11 @@ See `experiment_configs/repeats` for examples.
 To run an experiment, you only need to specify the model and dataset. The script will automatically use the default configuration file (which includes 5 seeds by default):
 
 ```bash
-# Run LinHRU on EigenWorms dataset with BPTT
-python run_experiment.py --model_name LinHRU --dataset_name EigenWorms --learning_algorithm BPTT
+# Run LinHRU on Heartbeat (the dataset with the smaller number of steps) dataset with BPTT
+python run_experiment.py --model_name LinHRU --dataset_name Heartbeat --learning_algorithm BPTT --seeds 2345 
 
-# Run NonlinHRU on EigenWorms dataset with RHEL
-python run_experiment.py --model_name NonlinHRU --dataset_name EigenWorms --learning_algorithm RHEL
+# Run LinHRU on Heartbeat (the dataset with the smaller number of steps) dataset with RHEL
+python run_experiment.py --model_name LinHRU --dataset_name EigenWorms --learning_algorithm RHEL
 ```
 
 **Key parameters:**

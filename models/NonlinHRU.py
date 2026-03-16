@@ -163,7 +163,6 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
     def dynamics_and_grads(Bu_elements_reversed, nudging_reversed, W_diag, b, c, alpha, step, epsilon):
         eps_nudging = epsilon * nudging_reversed
 
-        # perturbation already at the beginning
         z_end, y_end = residuals
         carry_ini = (-z_end + eps_nudging[0], y_end)
         eps_nudging_reversed = jnp.concatenate([eps_nudging[1:], jnp.zeros_like(eps_nudging[:1])])
@@ -178,7 +177,6 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
 
         # average gradient over time
         grads_hamiltonian_single_phase = [jnp.sum(grads, axis=0) if i != 0 else grads[::-1] for i, grads in enumerate(grads_t_hamiltonian_single_phase)]
-        # Bu, alpha, W_diag, b, c
 
         # add the null gradients
         full_grads_single_phase = (

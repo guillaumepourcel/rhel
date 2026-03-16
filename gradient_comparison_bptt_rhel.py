@@ -271,10 +271,10 @@ def main():
     output_dir = Path("outputs/gradient_comparisons")
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Save the plot
-    output_path = output_dir / "static_gradient_comparison.pdf"
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    print(f"\nPlot saved to: {output_path}")
+    # # Save the plot
+    # output_path = output_dir / "static_gradient_comparison.pdf"
+    # plt.savefig(output_path, bbox_inches='tight', dpi=300)
+    # print(f"\nPlot saved to: {output_path}")
     
     # Also save as PNG for easier viewing
     output_path_png = output_dir / "static_gradient_comparison.png"

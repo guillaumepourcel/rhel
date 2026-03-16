@@ -1,23 +1,24 @@
 # Core dependencies for RHEL (Recurrent Hamiltonian Echo Learning)
-# For exact version reproducibility, use uv.lock with: uv sync
+# For exact version reproducibility, use uv.lock with: uv pip sync uv.lock
 
-# JAX ecosystem - deep learning framework
-jax>=0.4.29
-equinox>=0.11.4
-optax>=0.2.2
-diffrax>=0.5.1
-chex>=0.1.90
+# JAX ecosystem
+jax==0.6.2
+equinox==0.13.4
+optax==0.2.7
 
 # Scientific computing
-numpy>=1.26.0
-matplotlib>=3.8.0
+numpy==2.2.6
+scipy==1.15.3
+matplotlib==3.10.8
+
+# Data processing (UEA datasets)
+pandas==2.3.3
+scikit-learn==1.7.2
+sktime==0.40.1
 
 # Utilities
-tqdm>=4.66.0
-
-# Experiment tracking (optional but recommended)
-wandb>=0.16.0
+tqdm==4.67.3
 
 # Development tools
-ipykernel>=6.29.0
-ipython>=8.37.0
+ipykernel==7.2.0
+ipython==8.38.0

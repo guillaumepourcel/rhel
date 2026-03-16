@@ -68,8 +68,8 @@ def binary_operator(q_i, q_j):
     return Anew, new_b + b_j
 
 
-def apply_lin_hru(A_diag, B, C, input_sequence, step):
-    """Compute the linear HRU IMEX response for an input sequence.
+def apply_lin_hru_bptt(A_diag, B, C, input_sequence, step):
+    """Compute the linear HRU response for an input sequence.
     Args:
         A_diag (float): diagonal state matrix, shape (P,)
         B (complex): input matrix, shape (P, H)
@@ -103,14 +103,17 @@ def apply_lin_hru(A_diag, B, C, input_sequence, step):
 
 def apply_lin_hru_internal_with_initial_state_and_nudging(lin_hru_arg, args):
     """Compute the full state sequence of the linear HRU.
-    
+
+    The input is already preprocessed to include the initial state and the
+    nudging for implementing RHEL.
+
     Args:
         lin_hru_arg (tuple): Tuple containing:
             - A_diag (float): diagonal state matrix, shape (P,)
             - F (float): preprocessed input, nudging and initial state, shape (L, 2*P)
             - step (float): discretization time-step $\Delta_t$, shape (P,)
         args: Additional arguments (currently unused)
-    
+
     Returns:
         xs (float): Full state sequence containing momentum and position components, shape (L, 2*P)
                    First P elements are momentum (z), last P elements are position (y)
@@ -211,7 +214,7 @@ def grad_Hamiltonian(complex_ssm, z, y, u, A_diag, B, step):
     else:
         return jax.grad(Hamiltonian, argnums=(2, 3, 4, 5))(z, y, u, A_diag, B, step)
 
-
+# Function used when called outside of grad()
 @eqx.filter_custom_vjp
 def apply_linhru_internal_imex_with_initial_state(vjp_arg, args):
     A_diag, B, _, input_sequence, _, step, _ = vjp_arg
@@ -224,7 +227,7 @@ def apply_linhru_internal_imex_with_initial_state(vjp_arg, args):
     ys = xs[:, vjp_arg[0].shape[0] :]
     return ys
 
-
+# Forward pass when called inside of grad()
 @apply_linhru_internal_imex_with_initial_state.def_fwd
 def fn_fwd(perturbed, vjp_arg, args):
     A_diag, B, _, input_sequence, _, step, _ = vjp_arg
@@ -239,14 +242,13 @@ def fn_fwd(perturbed, vjp_arg, args):
     return ys, xs_end
 
 
-# TODO: clean the code below
+# Backward pass when called inside of grad()
 @apply_linhru_internal_imex_with_initial_state.def_bwd
 def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
     A_diag, B, C, input_sequence, x_ini, step, epsilon = vjp_arg
     complex_ssm = args
 
     Bu_elements = jax.vmap(lambda u: B @ u)(input_sequence)[::-1, :]
-    # + Sigma_x Nabla_x L when the cost is only on the position
     nudge = grad_obj[::-1, :]
     epsilons = jnp.array([+epsilon, -epsilon])
     # momentum reversal
@@ -256,14 +258,14 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
         return grad_Hamiltonian(complex_ssm, x, y, input_sequence, A_diag, B, step)
 
 
-    # vmap the dynamics and the learning rule
+    # vmap the dynamics and the learning rule for running two echo passes per data sample (+/- epsilon)
 
     # dynamics: for computing the gradients
     def dynamics_and_grads(A_diag, B, C, input_sequence, Bu_elements, x_ini, step, args, nudge, residuals_reversed, epsilon):
 
-        # perturbation already at the begining
+        # prepare the input for the parallel scan
         # shift the elements to make place for the initial state and add the nudge at the beginning
-        Bu_elements = jnp.concatenate([jnp.zeros_like(Bu_elements[:1]), Bu_elements])  # + jnp.concatenate([epsilon * nudge, jnp.zeros_like(Bu_elements[:1])])=
+        Bu_elements = jnp.concatenate([jnp.zeros_like(Bu_elements[:1]), Bu_elements])  
 
         F1 = Bu_elements * step + jnp.concatenate([epsilon * nudge, jnp.zeros_like(Bu_elements[:1])])
         F2 = Bu_elements * (step**2.0) / 2.0
@@ -274,7 +276,7 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
         lin_hru_arg = (A_diag, F, step)
         xs = apply_lin_hru_internal_with_initial_state_and_nudging(lin_hru_arg, args)
 
-        # compute the intermediate Hamiltonian gradients
+        # compute the intermediate Hamiltonian gradients to get the input gradient
         def get_halfway(xs, step):
             y = xs[A_diag.shape[0] :]
             z = xs[: A_diag.shape[0]]
@@ -283,26 +285,20 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
 
         y_intermediate = jax.vmap(get_halfway, in_axes=(0, None))(xs[:-1], step)
 
-        # put to zero the last half of the first dim
-        # y_intermediate = jnp.concatenate([y_intermediate[ : y_intermediate.shape[0] // 2], jnp.zeros_like(y_intermediate[y_intermediate.shape[0] // 2 :])])
-
         grads_t_halfway = jax.vmap(wrapped_grad_hamiltonian, in_axes=(0, 0, 0, None, None, None))(
             xs[:-1, : A_diag.shape[0]], y_intermediate, input_sequence[::-1], A_diag, B, step
         )
 
         grads_input = grads_t_halfway[0][::-1]
-        # grads_input = grads_input.at[600:].set(jnp.zeros_like(grads_input[600:]))
 
-        # learning rule: for updating the parameters
-        # grads per time step (vmapped)
-        # grads per parameter (summed over time steps)
+        # compute the Hamiltonian gradient wrt to parameters per time step (vmapped) 
         grads_t_hamiltonian_single_phase = jax.vmap(wrapped_grad_hamiltonian, in_axes=(0, 0, 0, None, None, None))(
             xs[1:, : A_diag.shape[0]], xs[1:, A_diag.shape[0] :], input_sequence[::-1], A_diag, B, step
         )
-        # TODO: parallelize this
+        # Note: this loop could be parallelized for improved performance
         grads_hamiltonian_single_phase = [jnp.sum(grads, axis=0) if i != 0 else grads[::-1] for i, grads in enumerate(grads_t_hamiltonian_single_phase)]
 
-        # add the null gradients
+        # Note: could be simplified by not tracking gradients for C, x_ini, and epsilon.
         full_grads_single_phase = (
             grads_hamiltonian_single_phase[1],
             grads_hamiltonian_single_phase[2],
@@ -318,7 +314,7 @@ def fn_bwd(residuals, grad_obj, perturbed, vjp_arg, args):
         A_diag, B, C, input_sequence, Bu_elements, x_ini, step, args, nudge, residuals_reversed, epsilons
     )
 
-    # do the contrastive gradient
+    # compute the contrastive gradient
     grads_eqprop = jax.tree.map(lambda x: - (x[0] - x[1]) / (2 * epsilon), full_grads)
 
     return grads_eqprop
@@ -365,13 +361,11 @@ class LinHRULayer(eqx.Module):
         input_sequence_perturb = input_sequence
 
         if self.learning_algorithm == "BPTT":
-            ys_out = apply_lin_hru(A_diag, B_complex, C_complex, input_sequence_perturb, steps)
+            ys_out = apply_lin_hru_bptt(A_diag, B_complex, C_complex, input_sequence_perturb, steps)
         elif self.learning_algorithm == "RHEL":
             vjp_args = (A_diag, B_complex, C_complex, input_sequence_perturb, jnp.zeros_like(A_diag), steps, self.epsilon)
             args = self.complex_ssm
-            # only the internal computation
             ys = apply_linhru_internal_imex_with_initial_state(vjp_args, args)
-            # output of the LinHRU layer
             ys_out = jax.vmap(lambda x: (C_complex @ x).real)(ys)
         else:
             print("Learning algorithm type not implemented")
