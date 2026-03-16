@@ -140,7 +140,7 @@ To compare the two learning algorithms on the same dataset and model, simply run
 
 ## Project Structure
 
-> "The codebase has four main areas:"
+> The codebase has four main areas:
 
 ```
 rhel/
@@ -170,11 +170,11 @@ rhel/
 - **`LICENSE`**: MIT License for the project.
 
 ## Model Architecture
-> "Both models share the same macro-architecture -- a standard deep SSM design. There are three levels of class hierarchy. The novelty is inside the SSM layer."
+> Both models share the same macro-architecture -- a standard deep SSM design. There are three levels of class hierarchy. The novelty is inside the SSM layer.
 
 #### Shared HSSM architecture (both models)
 
-> "Three nested classes: **Model** (top-level), **Block** (repeated N times), **Layer** (the SSM core)."
+> Three nested classes: **Model** (top-level), **Block** (repeated N times), **Layer** (the SSM core).
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -222,7 +222,7 @@ Both share: project input -> run integrator -> read out with C -> add D skip
 
 ### Where RHEL lives
 
-> "RHEL only changes the **backward pass** of the ssm via a custom backward pass. Jax AD will automatically use this custom backward pass to chain rules through the ssm layer.
+> RHEL only changes the **backward pass** of the ssm via a custom backward pass. Jax AD will automatically use this custom backward pass to chain rules through the ssm layer.
 
 ## Reproducing the Results
 
